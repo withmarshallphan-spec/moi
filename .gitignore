@@ -1,0 +1,13 @@
+.build/
+Build/
+.DS_Store
+*.xcuserstate
+.claude/
+
+# Private development evidence can contain runtime paths and installed-app names.
+docs/development/screenshots/
+docs/development/evidence/
+
+# Internal notes, research, evidence and private assets (kept locally, never published).
+.private/
+.vscode/

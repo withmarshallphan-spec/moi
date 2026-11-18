@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>Moi</string>
+	<key>CFBundleExecutable</key>
+	<string>Moi</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>local.marshall.moi</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Moi</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>MOI reads track information and controls your selected Spotify or Apple Music player after you connect it.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>moi shows your next event in the notch, if you turn on the Calendar part. Events stay on this Mac.</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>moi looks at your Desktop only when you ask it to tidy, or to show your newest screenshots in the notch. It moves files into folders and never deletes them.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>moi shows your newest downloads in the notch so you can drag them where they need to go. It doesn't change or upload them.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>MOI captures microphone audio only when you explicitly start push-to-talk. Recognition is required to stay on-device.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>moi looks through your photos only when you ask it to find some (like “flowers” or “trip in Italy”). It can make an album of them; it never changes or deletes your photos.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>MOI converts your deliberate push-to-talk audio into a visible transcript using an available on-device recognizer.</string>
+	<key>NSSupportsAutomaticGraphicsSwitching</key>
+	<true/>
+</dict>
+</plist>
