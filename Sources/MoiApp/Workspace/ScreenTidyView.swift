@@ -40,25 +40,20 @@ final class ScreenTidyStore: ObservableObject {
         quitting = Set(apps.filter { MacControl.idleReason($0) != nil }.map(\.id))
     }
 
+    /// Opened from Ask moi: "go" or "yes" in the chat starts the clean-up.
+    @Published var awaitingGo = false
+
+    /// The review on screen is the confirmation (and everything can be put back): apps quit first,
+    /// so the desktop shows, then moi tidies the files in front of you.
     func cleanUp() async {
         guard !running else { return }
+        awaitingGo = false
         var files = plan
         files?.moves.removeAll { skipped.contains($0.from) }
         let targets = apps.filter { quitting.contains($0.id) }
         guard (files?.moves.isEmpty == false) || !targets.isEmpty else { return }
-        let alert = NSAlert()
-        alert.messageText = "Clean up your desktop?"
-        alert.informativeText = [files.map { "Move \($0.moves.count) files into folders in “\($0.folder.lastPathComponent)” on your Desktop." }, targets.isEmpty ? nil : "Quit " + targets.map(\.name).joined(separator: ", ") + ". Apps with unsaved work will ask you first."].compactMap { $0 }.joined(separator: "\n\n") + "\n\nNothing is deleted, and “Put everything back” undoes it."
-        alert.addButton(withTitle: "Clean Up"); alert.addButton(withTitle: "Cancel")
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
         running = true; defer { running = false }
         var said: [String] = []
-        if let files, !files.moves.isEmpty {
-            let before = TidyStore.shared.history.first?.id
-            said.append(TidyStore.shared.apply(files))
-            error = TidyStore.shared.error
-            lastRecord = TidyStore.shared.history.first.flatMap { $0.id == before ? nil : $0 }
-        }
         if !targets.isEmpty {
             let asked = MacControl.quit(targets)
             for _ in 0..<12 where !asked.allSatisfy({ NSRunningApplication(processIdentifier: $0.id)?.isTerminated ?? true }) { try? await Task.sleep(for: .milliseconds(250)) }
@@ -66,8 +61,14 @@ final class ScreenTidyStore: ObservableObject {
             let waiting = targets.filter { app in !lastQuit.contains { $0.id == app.id } }
             said.append("Quit \(lastQuit.count) \(lastQuit.count == 1 ? "app" : "apps")." + (waiting.isEmpty ? "" : " \(waiting.map(\.name).joined(separator: ", ")) \(waiting.count == 1 ? "is" : "are") waiting for you to save."))
         }
+        if let files, !files.moves.isEmpty {
+            let (record, failures) = await TidyShow.shared.run(files, appsQuit: lastQuit.count)
+            TidyStore.shared.remember(record, failures: failures)
+            error = TidyStore.shared.error
+            lastRecord = record.moves.isEmpty ? nil : record
+            said.insert("Sorted \(record.moves.count) \(record.moves.count == 1 ? "file" : "files") into “\(files.folder.lastPathComponent)”.", at: 0)
+        }
         Intelligence.shared.record("desktop clean-up", error == nil ? "Completed" : "Partial", said.joined(separator: " "))
-        message = said.joined(separator: " ")
         preview(); message = said.joined(separator: " ")
     }
 

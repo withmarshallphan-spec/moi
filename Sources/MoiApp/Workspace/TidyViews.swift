@@ -91,6 +91,12 @@ final class TidyStore: ObservableObject {
         return "Moved \(count(record.moves.count)) into “\(URL(fileURLWithPath: record.folder).lastPathComponent)”."
     }
 
+    /// Keeps a clean-up done elsewhere (moi's on-screen tidy) in the history, so Put back works.
+    func remember(_ record: DesktopTidy.Record, failures: [String]) {
+        if !record.moves.isEmpty { history.insert(record, at: 0); save() }
+        error = failures.isEmpty ? nil : Self.summary("Left in place: ", failures)
+    }
+
     func undo(_ record: DesktopTidy.Record) {
         let (restored, failures) = DesktopTidy.undo(record)
         if let index = history.firstIndex(where: { $0.id == record.id }) { history[index].undone = failures.isEmpty; save() }

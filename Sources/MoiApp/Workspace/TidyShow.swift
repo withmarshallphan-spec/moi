@@ -1,0 +1,169 @@
+import AppKit
+import SwiftUI
+
+/// moi's signature moment: it hops out of the notch, picks the files up off your desktop (the real
+/// icons disappear as it does), and hops back. Icon positions come from Finder when macOS allows it;
+/// otherwise moi follows the usual right-hand columns. With Reduce Motion it just tidies.
+@MainActor
+final class TidyShow: ObservableObject {
+    static let shared = TidyShow()
+    struct Flyer: Identifiable { let id = UUID(); var icon: NSImage; var from: CGPoint }
+    @Published var moi = CGPoint.zero
+    @Published var lift: CGFloat = 0
+    @Published var flyers: [Flyer] = []
+    @Published var landed = false
+    @Published var bubble = ""
+    @Published var mood: MoiCharacterState = .happy
+    @Published var opacity = 0.0
+    private var panel: NSPanel?
+
+    /// Moves the plan's files with moi doing it on screen. Returns one record, so Put back undoes it all.
+    func run(_ plan: DesktopTidy.Plan, appsQuit: Int) async -> (DesktopTidy.Record, [String]) {
+        guard let screen = NSScreen.screens.first, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion, !plan.moves.isEmpty else {
+            let result = DesktopTidy.apply(plan); return (result.record, result.failures)
+        }
+        let size = screen.frame.size
+        let positions = Self.iconPositions(for: plan.moves.map(\.from), screen: size)
+        let stops = Self.stops(plan.moves, positions: positions)
+        let home = CGPoint(x: size.width / 2, y: 18)
+        let hidden = NSApp.windows.filter { $0.isVisible && $0.canBecomeMain }
+        hidden.forEach { $0.orderOut(nil) } // moi's own window would hide the desktop
+        show(on: screen)
+        moi = home; lift = 0; flyers = []; mood = .happy
+        bubble = appsQuit > 0 ? "Bye, apps! Now the files…" : "Tidy time!"
+        withAnimation(.easeOut(duration: 0.25)) { opacity = 1 }
+        MoiChatter.shared.blip(); try? await Task.sleep(for: .seconds(0.9))
+        bubble = ""
+        var done: [DesktopTidy.Move] = [], failures: [String] = []
+        for stop in stops {
+            await hop(to: stop.point)
+            mood = .working
+            flyers = stop.moves.prefix(8).map { Flyer(icon: NSWorkspace.shared.icon(forFile: $0.from), from: positions[$0.from] ?? stop.point) }
+            landed = false
+            try? await Task.sleep(for: .milliseconds(30))
+            withAnimation(.easeIn(duration: 0.32)) { landed = true }
+            let result = DesktopTidy.apply(DesktopTidy.Plan(folder: plan.folder, moves: stop.moves, left: []))
+            done += result.record.moves; failures += result.failures
+            MoiChatter.shared.blip()
+            try? await Task.sleep(for: .milliseconds(380))
+            flyers = []
+        }
+        mood = .success
+        bubble = "All tidy! \(done.count) \(done.count == 1 ? "file" : "files") in folders."
+        MoiChatter.shared.blip()
+        try? await Task.sleep(for: .seconds(1.6))
+        bubble = ""
+        await hop(to: home)
+        withAnimation(.easeIn(duration: 0.3)) { opacity = 0 }
+        try? await Task.sleep(for: .milliseconds(320))
+        panel?.orderOut(nil); panel = nil
+        hidden.forEach { $0.orderFront(nil) }
+        return (DesktopTidy.Record(date: Date(), folder: plan.folder.path, moves: done), failures)
+    }
+
+    /// Big quick hops, with a boing each.
+    private func hop(to target: CGPoint) async {
+        let distance = hypot(target.x - moi.x, target.y - moi.y)
+        let hops = max(1, Int(distance / 230))
+        let step = CGPoint(x: (target.x - moi.x) / CGFloat(hops), y: (target.y - moi.y) / CGFloat(hops))
+        for _ in 0..<hops {
+            MoiChatter.shared.hop()
+            withAnimation(.easeOut(duration: 0.12)) { moi.x += step.x / 2; moi.y += step.y / 2; lift = -34 }
+            try? await Task.sleep(for: .milliseconds(120))
+            withAnimation(.easeIn(duration: 0.12)) { moi.x += step.x / 2; moi.y += step.y / 2; lift = 0 }
+            try? await Task.sleep(for: .milliseconds(130))
+        }
+        moi = target
+    }
+
+    private func show(on screen: NSScreen) {
+        let panel = NSPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        panel.level = .popUpMenu
+        panel.backgroundColor = .clear; panel.isOpaque = false; panel.hasShadow = false
+        panel.ignoresMouseEvents = true
+        panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
+        panel.contentView = NSHostingView(rootView: TidyShowView(show: self))
+        panel.setFrame(screen.frame, display: true)
+        panel.orderFrontRegardless()
+        self.panel = panel
+    }
+
+    // MARK: Where the icons are
+
+    /// Finder knows where each desktop icon sits (top-left origin, like the overlay). macOS asks once
+    /// before moi may ask Finder; without it, icons are assumed in the usual columns from the top right.
+    static func iconPositions(for paths: [String], screen: CGSize) -> [String: CGPoint] {
+        var found: [String: CGPoint] = [:]
+        let script = """
+        tell application "Finder"
+            set out to ""
+            repeat with f in (get items of desktop)
+                try
+                    set p to desktop position of f
+                    set out to out & (POSIX path of (f as alias)) & tab & (item 1 of p) & tab & (item 2 of p) & linefeed
+                end try
+            end repeat
+            return out
+        end tell
+        """
+        var error: NSDictionary?
+        let synthetic = ProcessInfo.processInfo.environment["MOI_TIDY_DESKTOP"] != nil // tests: no Finder, made-up files
+        if !synthetic, let text = NSAppleScript(source: script)?.executeAndReturnError(&error).stringValue {
+            for line in text.split(separator: "\n") {
+                let parts = line.split(separator: "\t").map(String.init)
+                guard parts.count == 3, let x = Double(parts[1]), let y = Double(parts[2]) else { continue }
+                found[parts[0].hasSuffix("/") ? String(parts[0].dropLast()) : parts[0]] = CGPoint(x: x, y: y + 20)
+            }
+        }
+        let rows = max(1, Int((screen.height - 120) / 100))
+        for (i, path) in paths.enumerated() where found[path] == nil {
+            found[path] = CGPoint(x: screen.width - 70 - CGFloat(i / rows) * 100, y: 90 + CGFloat(i % rows) * 100)
+        }
+        return found
+    }
+
+    /// Files near each other become one stop (at most eight), visited in a sweep from the top right.
+    static func stops(_ moves: [DesktopTidy.Move], positions: [String: CGPoint]) -> [(point: CGPoint, moves: [DesktopTidy.Move])] {
+        let cells = Dictionary(grouping: moves) { move -> String in
+            let p = positions[move.from] ?? .zero
+            return "\(Int(p.x / 260)),\(Int(p.y / 260))"
+        }
+        var stops = cells.values.map { group -> (point: CGPoint, moves: [DesktopTidy.Move]) in
+            let points = group.compactMap { positions[$0.from] }
+            let center = CGPoint(x: points.map(\.x).reduce(0, +) / CGFloat(max(1, points.count)), y: points.map(\.y).reduce(0, +) / CGFloat(max(1, points.count)))
+            return (center, group)
+        }.sorted { ($0.point.x, -$0.point.y) > ($1.point.x, -$1.point.y) }
+        while stops.count > 8 { // ponytail: merges the two last stops; a smarter clustering only matters for huge desktops
+            let last = stops.removeLast()
+            stops[stops.count - 1].moves += last.moves
+        }
+        return stops
+    }
+}
+
+private struct TidyShowView: View {
+    @ObservedObject var show: TidyShow
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            Color.clear
+            ForEach(show.flyers) { flyer in
+                Image(nsImage: flyer.icon).resizable().frame(width: 56, height: 56)
+                    .scaleEffect(show.landed ? 0.15 : 1)
+                    .opacity(show.landed ? 0 : 1)
+                    .position(show.landed ? show.moi : flyer.from)
+            }
+            MoiCharacter(state: show.mood, size: 74, sticker: true, essential: true)
+                .offset(y: show.lift)
+                .position(show.moi)
+            if !show.bubble.isEmpty {
+                Text(show.bubble).font(MoiType.display(15, weight: 640)).foregroundStyle(.white)
+                    .padding(.horizontal, 14).padding(.vertical, 9)
+                    .background(.black.opacity(0.82), in: Capsule())
+                    .position(x: show.moi.x, y: show.moi.y + 66)
+                    .transition(.opacity)
+            }
+        }
+        .opacity(show.opacity)
+        .allowsHitTesting(false)
+    }
+}

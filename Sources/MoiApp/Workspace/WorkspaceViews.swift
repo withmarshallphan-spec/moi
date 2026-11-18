@@ -116,7 +116,7 @@ struct WorkspaceSettingsView: View {
     @AppStorage("moi.cloudURL") private var cloudURL = "https://openrouter.ai/api/v1"
     @AppStorage("moi.voiceShortcutEnabled") private var talkShortcut = false
     @AppStorage("moi.musicPlayer") private var musicPlayer = "Spotify"
-    @AppStorage("moi.artworkNetwork") private var artwork = false
+    @AppStorage("moi.artworkNetwork") private var artwork = true
     @State private var key = ""
     @State private var keyMessage = ""
     var body: some View {
@@ -199,7 +199,7 @@ struct WorkspaceSettingsView: View {
                 }
                 BrainsSection()
                 Section("Privacy") {
-                    Toggle("Offline mode (blocks every cloud request)", isOn: $offline)
+                    Toggle("Offline mode (no cloud AI or weather)", isOn: $offline)
                         .onChange(of: offline) { _, value in if value { intelligence.cancel() } }
                     Text("Your plan, focus and clean-up never need an AI model.").font(MoiType.small).foregroundStyle(MoiStyle.quiet)
                 }
@@ -214,7 +214,7 @@ struct WorkspaceSettingsView: View {
                 Picker("Show and control", selection: $musicPlayer) { Text("Spotify").tag("Spotify"); Text("Apple Music").tag("Apple Music") }.pickerStyle(.segmented)
                     .onChange(of: musicPlayer) { _, _ in player.disconnect(); player.playerChanged() }
                 Text("The song shows in the notch on its own, with no permission. The first time you press play or skip, macOS asks once to let moi control \(musicPlayer).").font(MoiType.small).foregroundStyle(MoiStyle.quiet)
-                Toggle("Download album art (Spotify)", isOn: $artwork).onChange(of: artwork) { _, _ in player.refresh() }
+                Toggle("Show album art (Spotify)", isOn: $artwork).onChange(of: artwork) { _, _ in player.refresh() }
                 ModuleMessage(text: player.error)
             }
         }.formStyle(.grouped)

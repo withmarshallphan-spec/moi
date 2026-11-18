@@ -48,7 +48,7 @@ struct PageGuide: Identifiable {
         case .settings:
             [("Make it yours", "Colours, the notch, shortcuts and the Pocket."),
              ("Give moi a brain", "Paste a free key under Brain & voice. moi works out whose it is."),
-             ("Your data stays yours", "Offline mode blocks every cloud request. Keys live in your Keychain.")]
+             ("Your data stays yours", "Offline mode turns off cloud AI and weather. Keys live in your Keychain.")]
         case .overview:
             [("Your day, first", "What's happening now and what's next."),
              ("Ask from here", "Type or tap the mic: “gym tomorrow 4pm”."),

@@ -238,6 +238,14 @@ final class Intelligence: ObservableObject {
         guard !text.isEmpty, text.count <= 12_000, !busy else { return }
         draft = ""; error = nil
         messages.append(MoiMessage(fromMOI: false, text: text))
+        // "go" after moi showed the desktop clean-up starts it.
+        let reply = text.lowercased().trimmingCharacters(in: .punctuationCharacters.union(.whitespaces))
+        if ScreenTidyStore.shared.awaitingGo, pending == nil, ["go", "yes", "yeah", "yep", "do it", "go ahead", "ok", "okay", "clean it", "sure"].contains(reply) {
+            say("On it!", source: "moi")
+            Task { await ScreenTidyStore.shared.cleanUp() }
+            return
+        }
+        ScreenTidyStore.shared.awaitingGo = false
         if let store, pending != nil {
             let answer = text.lowercased().trimmingCharacters(in: .punctuationCharacters.union(.whitespaces))
             if ["yes", "yeah", "yep", "yup", "sure", "ok", "okay", "do it", "go ahead", "please", "yes please"].contains(answer) { approvePending(store: store); return }
@@ -512,7 +520,8 @@ final class Intelligence: ObservableObject {
                 tidy.tab = .screen
                 MoiWorkspace.shared.showMain(.clean); ScreenTidyStore.shared.preview()
                 let screen = ScreenTidyStore.shared
-                say("Here's your desktop: \(screen.summary.prefix(1).lowercased() + screen.summary.dropFirst()). Change anything you like, then press Clean up.", source: source)
+                screen.awaitingGo = true
+                say("Here's your desktop: \(screen.summary.prefix(1).lowercased() + screen.summary.dropFirst()). Say “go” and I'll tidy it, or change anything first.", source: source)
                 return
             }
             tidy.folder = TidyStore.Folder(spoken: folder ?? "desktop")

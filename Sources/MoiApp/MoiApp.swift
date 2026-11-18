@@ -8,6 +8,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let dir = ProcessInfo.processInfo.environment["MOI_EXPORT_CHARACTER"] { MoiCharacterSheet.export(to: URL(fileURLWithPath: dir)); exit(0) }
 #endif
         NSApp.applicationIconImage = NSImage(contentsOf: Bundle.main.url(forResource: "AppIcon", withExtension: "icns") ?? URL(fileURLWithPath: "/")) ?? MoiIdentity.logo
+        // The notch, shortcuts and reminders start even when no window opens (moi lives in the notch).
+        DispatchQueue.main.async { MainActor.assumeIsolated { MoiApp.startup?() } }
     }
     func applicationWillTerminate(_ notification: Notification) {
         VoiceService.shared.cancel()
@@ -23,13 +25,30 @@ struct MoiApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var workspace = MoiWorkspace.shared
     @StateObject private var store: AppStore
-    @StateObject private var notch = NotchController()
-    @StateObject private var pocket = PocketController()
+    @StateObject private var notch: NotchController
+    @StateObject private var pocket: PocketController
+
+    /// Starts everything that doesn't need a window, once: from launch, or from the window, whichever is first.
+    static var startup: (() -> Void)?
 
     init() {
-        UserDefaults.standard.register(defaults: ["moi.offline": true])
+        UserDefaults.standard.register(defaults: ["moi.offline": true, "moi.artworkNetwork": true])
         MoiType.register()
-        _store = StateObject(wrappedValue: AppStore())
+        let store = AppStore(), notch = NotchController(), pocket = PocketController(), workspace = MoiWorkspace.shared
+        _store = StateObject(wrappedValue: store)
+        _notch = StateObject(wrappedValue: notch)
+        _pocket = StateObject(wrappedValue: pocket)
+        var started = false
+        Self.startup = {
+            guard !started else { return }
+            started = true
+            workspace.configure(store: store)
+            notch.configure(store: store)
+            pocket.configure(store: store, notch: notch)
+            NotificationService.shared.configure(store: store)
+            if store.data.settings.notificationsEnabled { NotificationService.shared.reschedule(using: store.data) }
+            if store.activeFocus != nil { SoftBlocker.shared.begin(store: store) }
+        }
     }
 
     var body: some Scene {
@@ -38,14 +57,7 @@ struct MoiApp: App {
                 .environmentObject(store)
                 .environmentObject(workspace)
                 .frame(minWidth: 960, minHeight: 600)
-                .task {
-                    workspace.configure(store: store)
-                    notch.configure(store: store)
-                    pocket.configure(store: store, notch: notch)
-                    NotificationService.shared.configure(store: store)
-                    if store.data.settings.notificationsEnabled { NotificationService.shared.reschedule(using: store.data) }
-                    if store.activeFocus != nil { SoftBlocker.shared.begin(store: store) }
-                }
+                .task { MoiApp.startup?() }
         }
         .defaultSize(width: 1240, height: 800)
         .commands {
@@ -117,8 +129,6 @@ struct RootView: View {
         .sheet(isPresented: $workspace.about) { AboutMOIView() }
         .sheet(item: $pageGuide) { guide in PageGuideView(guide: guide).environmentObject(store).environmentObject(workspace) }
         .toolbar { Button { pageGuide = currentGuide } label: { Label("Page guide", systemImage: "questionmark.circle") } }
-        .task(id: currentGuide.id) { offerPageGuide() }
-        .onChange(of: workspace.onboarding) { _, shown in if !shown { offerPageGuide() } }
         .sheet(isPresented: Binding(get: { store.planningDeadlineID != nil }, set: { if !$0 { store.planningDeadlineID = nil } })) {
             if let id = store.planningDeadlineID { DeadlinePlanView(deadlineID: id).environmentObject(store) }
         }
@@ -136,12 +146,6 @@ struct RootView: View {
         }
     }
 
-    private func offerPageGuide() {
-        guard !workspace.onboarding, !workspace.notchEditor, !workspace.about,
-              UserDefaults.standard.bool(forKey: "moi.onboardingComplete"),
-              !UserDefaults.standard.bool(forKey: currentGuide.seenKey) else { return }
-        pageGuide = currentGuide
-    }
 }
 
 /// moi's own sidebar: moi and your name at the top, sections separated by space instead of

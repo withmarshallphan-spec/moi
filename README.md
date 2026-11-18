@@ -2,7 +2,7 @@
 
 A small helper that lives in your Mac's notch. Tell it what you need, by typing or talking, and it does it, on your Mac, with native macOS features (no screen-clicking robots).
 
-- **Clean up your desktop.** "clean up my desktop" sorts every loose file into folders by kind and quits the apps you haven't touched in a while. One button puts it all back.
+- **Watch moi clean up your desktop.** Say "clean up my desktop", then "go": moi hops out of the notch and picks your files up off the desktop, into folders by kind, and quits the apps you haven't touched in a while. One button puts it all back.
 - **Sort your photos.** "sort my flower photos and my trips" finds flowers with on-device Vision and works out every trip from where and when photos were taken ("Italy · Mar 2025"), then makes Photos albums. Your photos are never changed.
 - **Pick a wallpaper.** "change my wallpaper to my best photo" ranks your photos with Apple's on-device photo-quality scoring and puts the best one up. Say "undo" to go back.
 - **Run your day.** "gym tomorrow 16:30", "move it to 5pm", "the essay is done", "what's tomorrow?".
@@ -37,7 +37,7 @@ Keys stay in your Keychain. Paid providers are never used unless you choose them
 
 ## Privacy
 
-Your plan, files and photos stay on your Mac. A cloud brain only receives what you type to moi, after you've said OK. Offline mode blocks every cloud request. Each macOS permission is asked for when you first use the feature that needs it, or all at once in the introduction. Details: [PRIVACY.md](PRIVACY.md).
+Your plan, files and photos stay on your Mac. A cloud brain only receives what you type to moi, after you've said OK. Offline mode blocks cloud AI and weather. Each macOS permission is asked for when you first use the feature that needs it, or all at once in the introduction. Details: [PRIVACY.md](PRIVACY.md).
 
 ## Develop
 

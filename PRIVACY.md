@@ -18,9 +18,9 @@ moi runs on your Mac. There's no account, no analytics and no server of ours.
 | Your plan's item names and times | Your cloud brain | Only if you turn on "Let … see my plan". Local brains always see it. |
 | A place name you search for ("Italy"), and rough locations of photos near it | Apple's map service | When you search photos by place, or name trips. |
 | Your chosen city's rough coordinates | [Open-Meteo](https://open-meteo.com) (free, no account) | Only with the notch's UV & weather part on, at most every 30 minutes, never in offline mode. |
-| Album artwork lookups | Your music app | When "Show artwork" is on. |
+| The current song's cover picture | Spotify's image server | While Spotify plays and "Show album art" is on (the default; Settings → Music). |
 
-Speech is recognised on your Mac; audio is never recorded or uploaded.
+Offline mode blocks cloud AI and weather. Speech is recognised on your Mac; audio is never recorded or uploaded.
 
 ## What moi does with your files and photos
 

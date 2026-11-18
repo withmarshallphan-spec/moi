@@ -61,6 +61,9 @@ final class MoiWorkspace: ObservableObject {
         onboarding = !UserDefaults.standard.bool(forKey: "moi.onboardingComplete")
         // MOI_ONBOARDING=1 replays the introduction from the start (handy during development).
         if ProcessInfo.processInfo.environment["MOI_ONBOARDING"] == "1" { UserDefaults.standard.set(0, forKey: "moi.onboardingStep"); onboarding = true }
+        if ProcessInfo.processInfo.environment["MOI_TIDY_SHOW"] == "1", MoiPaths.isDevelopment, ProcessInfo.processInfo.environment["MOI_TIDY_DESKTOP"] != nil { // development: the on-screen tidy on synthetic files, quitting nothing
+            Task { try? await Task.sleep(for: .seconds(2)); let s = ScreenTidyStore.shared; s.preview(); s.quitting = []; await s.cleanUp() }
+        }
         if ProcessInfo.processInfo.environment["MOI_NOTCH_EDITOR"] == "1", MoiPaths.isDevelopment { onboarding = false; showMain(.settings); notchEditor = true }
         if let text = ProcessInfo.processInfo.environment["MOI_PHOTO_SEARCH"], MoiPaths.isDevelopment { TidyStore.shared.tab = .photos; showMain(.clean); PhotoFinder.shared.search(text) }
         // MOI_SECTION=<rawValue> opens a section at launch (development screenshots).

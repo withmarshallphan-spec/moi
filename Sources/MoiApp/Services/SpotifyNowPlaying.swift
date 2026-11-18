@@ -159,7 +159,8 @@ final class SpotifyNowPlaying: ObservableObject {
         return error["NSAppleScriptErrorMessage"] as? String ?? "Music command failed."
     }
     private func updateArtworkIfNeeded(for snapshot: SpotifyPlaybackSnapshot?) {
-        guard UserDefaults.standard.bool(forKey: "moi.artworkNetwork"), !(UserDefaults.standard.object(forKey: "moi.offline") as? Bool ?? true), let snapshot, let url = snapshot.artworkURL, url.scheme == "https" else {
+        // Just the cover picture from Spotify's image server (no personal data), so it works in offline mode too.
+        guard UserDefaults.standard.bool(forKey: "moi.artworkNetwork"), let snapshot, let url = snapshot.artworkURL, url.scheme == "https" else {
             artworkTask?.cancel(); cachedArtworkTrackID = nil; artwork = nil; return
         }
         guard snapshot.trackID != cachedArtworkTrackID else { return }
