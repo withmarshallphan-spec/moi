@@ -27,6 +27,9 @@ final class MoiWorkspace: ObservableObject {
     @Published var shortcut: CommandShortcut { didSet { UserDefaults.standard.set(shortcut.rawValue, forKey: "moi.commandShortcut"); configureHotkeys() } }
     @Published var onboarding = false
     @Published var notchEditor = false
+    /// A share card to show (after a clean-up or wrapping up the day).
+    @Published var shareCard: TidyStats?
+    @Published var wrapUp = false
     @Published var about = false
     @Published var planMode = "List"
     private var configured = false
@@ -64,6 +67,10 @@ final class MoiWorkspace: ObservableObject {
         if ProcessInfo.processInfo.environment["MOI_TIDY_SHOW"] == "1", MoiPaths.isDevelopment, ProcessInfo.processInfo.environment["MOI_TIDY_DESKTOP"] != nil { // development: the on-screen tidy on synthetic files, quitting nothing
             Task { try? await Task.sleep(for: .seconds(2)); let s = ScreenTidyStore.shared; s.preview(); s.quitting = []; await s.cleanUp() }
         }
+        if MoiPaths.isDevelopment, let path = ProcessInfo.processInfo.environment["MOI_SHARE_CARD"] { // development: render the share card
+            ShareCardImage.export(TidyStats(files: 26, apps: 4, doneToday: 3), to: URL(fileURLWithPath: path))
+        }
+        if MoiPaths.isDevelopment, ProcessInfo.processInfo.environment["MOI_WRAPUP"] == "1" { onboarding = false; showMain(); wrapUp = true }
         if ProcessInfo.processInfo.environment["MOI_NOTCH_EDITOR"] == "1", MoiPaths.isDevelopment { onboarding = false; showMain(.settings); notchEditor = true }
         if let text = ProcessInfo.processInfo.environment["MOI_PHOTO_SEARCH"], MoiPaths.isDevelopment { TidyStore.shared.tab = .photos; showMain(.clean); PhotoFinder.shared.search(text) }
         // MOI_SECTION=<rawValue> opens a section at launch (development screenshots).

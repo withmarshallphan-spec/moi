@@ -8,7 +8,7 @@ struct GuideView: View {
         ("Your plan", "calendar", ["gym tomorrow 16:30", "move it to 5pm", "the essay is done", "what's tomorrow?"]),
         ("Photos", "photo.on.rectangle", ["sort my flower photos and my trips", "photos from my trip in Italy", "make a sunset photo my wallpaper"]),
         ("Your Mac", "macbook", ["quit everything except Safari", "remove Discord from my Dock", "open YouTube in a private window", "clean up my downloads"]),
-        ("Focus", "timer", ["focus on the essay for 50 minutes"]),
+        ("Focus", "timer", ["focus on the essay for 50 minutes", "wrap up my day"]),
     ]
     private let places: [(String, String, String)] = [
         ("rectangle.topthird.inset.filled", "The notch", "Rest your pointer on it for music. Click it for your day and newest downloads."),

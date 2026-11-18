@@ -45,10 +45,14 @@ enum NotchLayout {
     }
 
     /// `parts` are the visible parts in order; hover shows only the first.
-    static func size(_ mode: NotchController.Mode, notch: CGSize, parts: [NotchPart], showsNow: Bool = true, recentHeight: CGFloat = 0) -> CGSize {
+    static let nudge: CGFloat = 54
+
+    static func size(_ mode: NotchController.Mode, notch: CGSize, parts: [NotchPart], showsNow: Bool = true, recentHeight: CGFloat = 0, nudge: Bool = false) -> CGSize {
         switch mode {
         case .collapsed: return notch
         case .live: return CGSize(width: notch.width + 2 * (liveWing + shoulder), height: notch.height)
+        case .peek where nudge:
+            return CGSize(width: max(460, notch.width + 2 * (wing + shoulder)), height: notch.height + 8 + Self.nudge + 14)
         case .peek:
             let first = parts.first.map { height(of: $0, showsNow: showsNow, recentHeight: recentHeight) } ?? 0
             return CGSize(width: max(400, notch.width + 2 * (wing + shoulder)), height: notch.height + (first > 0 ? 8 + first + 14 : 0))
@@ -80,6 +84,8 @@ final class NotchController: NSObject, ObservableObject {
     @Published private(set) var showsNow = false
     /// The parts that have something to show, in the person's order.
     @Published private(set) var visibleParts: [NotchPart] = []
+    /// Something moi noticed and offers to do, shown as a peek ("31 loose files on your desktop").
+    @Published private(set) var nudge: Nudge?
     /// The notch editor's copy: always open, never a window of its own.
     private(set) var isPreview = false
     /// Newest downloads and screenshots. Off until the person turns it on, because reading those
@@ -180,6 +186,19 @@ final class NotchController: NSObject, ObservableObject {
 #endif
     }
 
+    /// Peeks out with a suggestion, and tucks it away again after a while if it's ignored.
+    func show(_ suggestion: Nudge) {
+        guard !isOpen, !isPreview, NotchPreferences().panelEnabled else { return }
+        nudge = suggestion
+        sticky = false
+        open(.peek)
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(12))
+            guard let self, self.nudge == suggestion, self.mode == .peek, !self.pointerIsInside else { return }
+            self.collapse()
+        }
+    }
+
     func toggleExpanded() { mode == .expanded ? collapse() : expand(sticky: true) }
 
     func expand(sticky: Bool) {
@@ -210,6 +229,7 @@ final class NotchController: NSObject, ObservableObject {
         hoverDwellTask?.cancel()
         hoverExitTask?.cancel()
         sticky = false
+        nudge = nil
         mode = hasLive ? .live : .collapsed
         if mode == .live { measureNotch() }
         spotify.stop(client: "notch")
@@ -272,7 +292,7 @@ final class NotchController: NSObject, ObservableObject {
         let generation = layoutGeneration
         let target: NSRect
         if mode == .collapsed { target = notchTriggerRect(on: activeScreen ?? screenContainingMouse() ?? NSScreen.main) }
-        else { let size = NotchLayout.size(mode, notch: notchSize, parts: visibleParts, showsNow: showsNow, recentHeight: recentHeight); target = attachedFrame(width: size.width, height: size.height) }
+        else { let size = NotchLayout.size(mode, notch: notchSize, parts: visibleParts, showsNow: showsNow, recentHeight: recentHeight, nudge: nudge != nil); target = attachedFrame(width: size.width, height: size.height) }
         guard panel.frame != target else { return }
         let grows = target.width >= panel.frame.width && target.height >= panel.frame.height
         if grows || !panel.isVisible { panel.setFrame(target, display: true); return }

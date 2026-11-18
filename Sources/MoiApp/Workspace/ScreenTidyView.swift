@@ -16,6 +16,8 @@ final class ScreenTidyStore: ObservableObject {
     @Published private(set) var running = false
     @Published private(set) var lastRecord: DesktopTidy.Record?
     @Published private(set) var lastQuit: [MacControl.OpenApp] = []
+    /// What the last clean-up did, for the share card.
+    @Published var last: TidyStats?
 
     var desktop: URL { ProcessInfo.processInfo.environment["MOI_TIDY_DESKTOP"].map { URL(fileURLWithPath: $0, isDirectory: true) } ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Desktop", isDirectory: true) }
 
@@ -53,21 +55,18 @@ final class ScreenTidyStore: ObservableObject {
         let targets = apps.filter { quitting.contains($0.id) }
         guard (files?.moves.isEmpty == false) || !targets.isEmpty else { return }
         running = true; defer { running = false }
+        let outcome = await TidyShow.shared.run(files: files, apps: targets)
         var said: [String] = []
-        if !targets.isEmpty {
-            let asked = MacControl.quit(targets)
-            for _ in 0..<12 where !asked.allSatisfy({ NSRunningApplication(processIdentifier: $0.id)?.isTerminated ?? true }) { try? await Task.sleep(for: .milliseconds(250)) }
-            lastQuit = asked.filter { NSRunningApplication(processIdentifier: $0.id)?.isTerminated ?? true }
-            let waiting = targets.filter { app in !lastQuit.contains { $0.id == app.id } }
-            said.append("Quit \(lastQuit.count) \(lastQuit.count == 1 ? "app" : "apps")." + (waiting.isEmpty ? "" : " \(waiting.map(\.name).joined(separator: ", ")) \(waiting.count == 1 ? "is" : "are") waiting for you to save."))
-        }
-        if let files, !files.moves.isEmpty {
-            let (record, failures) = await TidyShow.shared.run(files, appsQuit: lastQuit.count)
-            TidyStore.shared.remember(record, failures: failures)
+        if let record = outcome.record, let files {
+            TidyStore.shared.remember(record, failures: outcome.failures)
             error = TidyStore.shared.error
             lastRecord = record.moves.isEmpty ? nil : record
-            said.insert("Sorted \(record.moves.count) \(record.moves.count == 1 ? "file" : "files") into “\(files.folder.lastPathComponent)”.", at: 0)
+            said.append("Sorted \(record.moves.count) \(record.moves.count == 1 ? "file" : "files") into “\(files.folder.lastPathComponent)”.")
         }
+        lastQuit = outcome.quit
+        if !targets.isEmpty { said.append("Quit \(outcome.quit.count) \(outcome.quit.count == 1 ? "app" : "apps")." + (outcome.waiting.isEmpty ? "" : " \(outcome.waiting.map(\.name).joined(separator: ", ")) \(outcome.waiting.count == 1 ? "is" : "are") waiting for you to save.")) }
+        last = TidyStats(files: outcome.record?.moves.count ?? 0, apps: outcome.quit.count)
+        TidyStats.addToLifetime(last!)
         Intelligence.shared.record("desktop clean-up", error == nil ? "Completed" : "Partial", said.joined(separator: " "))
         preview(); message = said.joined(separator: " ")
     }
@@ -75,7 +74,7 @@ final class ScreenTidyStore: ObservableObject {
     func putBack() {
         if let lastRecord { TidyStore.shared.undo(lastRecord); error = TidyStore.shared.error }
         MacControl.reopen(lastQuit)
-        lastRecord = nil; lastQuit = []
+        lastRecord = nil; lastQuit = []; last = nil
         message = "Everything's back where it was."
         Task { try? await Task.sleep(for: .seconds(1.5)); let note = message; preview(); message = note }
     }
@@ -92,6 +91,7 @@ struct ScreenTidyView: View {
                         Text(tidy.summary).font(MoiType.ui(13.5)).foregroundStyle(MoiStyle.quiet)
                     }
                     Spacer()
+                    if let last = tidy.last, last.files + last.apps > 0 { Button { MoiWorkspace.shared.shareCard = last } label: { Label("Share", systemImage: "square.and.arrow.up") }.buttonStyle(.moiGhost) }
                     if tidy.lastRecord != nil || !tidy.lastQuit.isEmpty { Button("Put everything back") { tidy.putBack() }.buttonStyle(.moiGhost) }
                     Button(tidy.running ? "Cleaning…" : "Clean up") { Task { await tidy.cleanUp() } }
                         .buttonStyle(.moiPrimary).disabled(tidy.running || (tidy.fileCount == 0 && tidy.quitting.isEmpty))

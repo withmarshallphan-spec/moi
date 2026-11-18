@@ -61,6 +61,7 @@ enum MoiIntent: Equatable {
     case webSearch(String)
     case findPhotos(String)              // "flower photos", "trip in italy", "dog 2023"
     case wallpaper(String)               // a photo to find and put on the desktop: "a flower photo"
+    case wrapUp                          // "wrap up my day": recap, tidy, close apps
     case showApps                        // what's open
     case quitApps([String], allExcept: [String]?)        // nil = just these; [] = everything
     case hideApps(allExcept: [String])
@@ -83,6 +84,7 @@ extension MoiCommand {
         func list(_ s: String) -> [String] { s.replacingOccurrences(of: #"\s+(?:and|&)\s+"#, with: ",", options: [.regularExpression, .caseInsensitive]).split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: #"^(?:the|my)\s+"#, with: "", options: [.regularExpression, .caseInsensitive]) }.filter { !$0.isEmpty } }
 
         if match(#"^(?:undo(?: that)?|take that back|never ?mind)$"#) != nil { return .undo }
+        if match(#"\b(?:wrap(?:ping)? up(?: (?:my|the|for the))? day|end (?:my|the) day|(?:i'?m |im )?done for (?:the day|today)|shut ?down for the day|call it a day)\b"#) != nil { return .wrapUp }
         // The Dock
         if let g = match(#"^(?:remove|take|delete|get rid of|unpin)\s+(.+?)\s+(?:from|off|out of)\s+(?:my |the )?dock$"#) { return .dockRemove(list(g[1])) }
         if let g = match(#"^(?:add|put|pin)\s+(.+?)\s+(?:to|in|on|into)\s+(?:my |the )?dock$"#) { return .dockAdd(list(g[1])) }
@@ -236,6 +238,7 @@ extension MoiCommand {
         case "search": return value.isEmpty ? nil : .webSearch(value)
         case "photos": return value.isEmpty ? nil : .findPhotos(value)
         case "wallpaper": return value.isEmpty ? nil : .wallpaper(value)
+        case "wrap_up": return .wrapUp
         case "show_apps": return .showApps
         case "quit": return value.isEmpty ? nil : .quitApps(value.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }, allExcept: nil)
         case "quit_all": return .quitApps([], allExcept: value.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty })

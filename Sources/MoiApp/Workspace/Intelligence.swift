@@ -126,8 +126,8 @@ struct BrainEntry: Codable, Equatable {
 
 /// Everything moi can do, told to every brain the same way.
 enum MoiActions {
-    static let kinds = ["none", "add", "move", "complete", "delete", "cleanup", "photos", "screenshot", "focus", "open", "search", "show_apps", "quit", "quit_all", "hide_all", "dock_add", "dock_remove", "wallpaper"]
-    static let guide = "add = put something new on their plan; move = change when an existing item happens; complete = mark an item done; delete = remove an item from the plan; cleanup = tidy a folder (value: desktop, downloads, documents, pictures or home); photos = find photos by what's in them, place or year and gather them into albums or folders (value: e.g. 'flowers', 'trip in italy', 'dog 2023', 'my trips' for every trip sorted by place, or several joined with 'and'); screenshot = take a screenshot; focus = start a focus timer (value: what on); open = open an app or a website (value: name or site, add 'in private' or 'in safari' etc. if asked); search = search the web (value: query); show_apps = show what's open; quit = quit apps (value: comma-separated names); quit_all = quit everything except (value: comma-separated names to keep, may be empty); hide_all = hide everything except (value: names to keep); dock_add / dock_remove = add or take apps out of the Dock (value: app names); wallpaper = find a photo and make it the desktop wallpaper (value: what to look for, e.g. 'flowers' or 'trip in italy'); none = just talking or answering"
+    static let kinds = ["none", "add", "move", "complete", "delete", "cleanup", "photos", "screenshot", "focus", "open", "search", "show_apps", "quit", "quit_all", "hide_all", "dock_add", "dock_remove", "wallpaper", "wrap_up"]
+    static let guide = "add = put something new on their plan; move = change when an existing item happens; complete = mark an item done; delete = remove an item from the plan; cleanup = tidy a folder (value: desktop, downloads, documents, pictures or home); photos = find photos by what's in them, place or year and gather them into albums or folders (value: e.g. 'flowers', 'trip in italy', 'dog 2023', 'my trips' for every trip sorted by place, or several joined with 'and'); screenshot = take a screenshot; focus = start a focus timer (value: what on); open = open an app or a website (value: name or site, add 'in private' or 'in safari' etc. if asked); search = search the web (value: query); show_apps = show what's open; quit = quit apps (value: comma-separated names); quit_all = quit everything except (value: comma-separated names to keep, may be empty); hide_all = hide everything except (value: names to keep); dock_add / dock_remove = add or take apps out of the Dock (value: app names); wrap_up = end the day: recap what's done and tomorrow, tidy the desktop, close apps; wallpaper = find a photo and make it the desktop wallpaper (value: what to look for, e.g. 'flowers' or 'trip in italy'); none = just talking or answering"
     static let valueGuide = "For add: the thing and when, e.g. 'dentist friday 16:30'. For move: only the new day and 24-hour time, e.g. 'tomorrow 16:30'. For the other actions, as described. Otherwise empty."
     static let targetGuide = "For move, complete or delete: the item's name in the user's words, or 'it' for the one just discussed. Otherwise empty."
 
@@ -550,6 +550,9 @@ final class Intelligence: ObservableObject {
                     self.say("Done! I went with this one: \(best.reason.prefix(1).lowercased() + best.reason.dropFirst()). Not your favourite? Four more are in Clean up → Photos, or say “undo”.", source: source)
                 }
             }
+        case .wrapUp:
+            MoiWorkspace.shared.showMain(); MoiWorkspace.shared.wrapUp = true
+            say("Here's your day. Press Wrap up when you're ready and I'll tidy up.", source: source)
         case .showApps:
             TidyStore.shared.tab = .apps
             MoiWorkspace.shared.showMain(.clean)

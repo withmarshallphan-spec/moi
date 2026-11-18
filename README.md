@@ -4,7 +4,9 @@ A small helper that lives in your Mac's notch. Tell it what you need, by typing 
 
 - **Watch moi clean up your desktop.** Say "clean up my desktop", then "go": moi hops out of the notch and picks your files up off the desktop, into folders by kind, and quits the apps you haven't touched in a while. One button puts it all back.
 - **Sort your photos.** "sort my flower photos and my trips" finds flowers with on-device Vision and works out every trip from where and when photos were taken ("Italy · Mar 2025"), then makes Photos albums. Your photos are never changed.
-- **Pick a wallpaper.** "change my wallpaper to my best photo" ranks your photos with Apple's on-device photo-quality scoring and puts the best one up. Say "undo" to go back.
+- **Wrap up your day.** "wrap up my day" shows what you finished and what's tomorrow, then moi tidies up and closes your apps, and gives you a little card of the day to share.
+- **moi notices.** A messy desktop, apps you left running, the end of the day: moi offers to help from the notch, one tap, and never nags.
+- **Pick a wallpaper.** "change my wallpaper to my best photo" ranks your photos with Apple's on-device photo-quality scoring, and moi carries the best one up and hangs it. Say "undo" to go back.
 - **Run your day.** "gym tomorrow 16:30", "move it to 5pm", "the essay is done", "what's tomorrow?".
 - **Tame your Mac.** "quit everything except Safari", "remove Discord from my Dock", "open YouTube in a private window", "clean up my downloads".
 - **Focus.** "focus on the essay for 50 minutes". Open a distracting app and moi asks if you want to get back to it.

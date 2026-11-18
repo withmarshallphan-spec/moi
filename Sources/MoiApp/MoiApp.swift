@@ -45,6 +45,7 @@ struct MoiApp: App {
             workspace.configure(store: store)
             notch.configure(store: store)
             pocket.configure(store: store, notch: notch)
+            MoiNudges.shared.start(notch: notch, store: store)
             NotificationService.shared.configure(store: store)
             if store.data.settings.notificationsEnabled { NotificationService.shared.reschedule(using: store.data) }
             if store.activeFocus != nil { SoftBlocker.shared.begin(store: store) }
@@ -126,6 +127,8 @@ struct RootView: View {
         .sheet(isPresented: $store.quickAddPresented) { QuickAddView().environmentObject(store) }
         .sheet(isPresented: $workspace.onboarding) { OnboardingView().environmentObject(store).environmentObject(workspace) }
         .sheet(isPresented: $workspace.notchEditor) { NotchEditorView(notch: notch).environmentObject(store) }
+        .sheet(item: $workspace.shareCard) { ShareCardSheet(stats: $0) }
+        .sheet(isPresented: $workspace.wrapUp) { WrapUpView().environmentObject(store) }
         .sheet(isPresented: $workspace.about) { AboutMOIView() }
         .sheet(item: $pageGuide) { guide in PageGuideView(guide: guide).environmentObject(store).environmentObject(workspace) }
         .toolbar { Button { pageGuide = currentGuide } label: { Label("Page guide", systemImage: "questionmark.circle") } }

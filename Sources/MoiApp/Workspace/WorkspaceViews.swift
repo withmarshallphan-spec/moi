@@ -21,6 +21,8 @@ struct WorkspaceOverview: View {
                         Text(DayAnswers.summaryLine(data: store.data, now: store.now, calendar: store.calendar)).font(MoiType.ui(16)).foregroundStyle(MoiStyle.quiet)
                     }
                     Spacer()
+                    Button { workspace.wrapUp = true } label: { Label("Wrap up my day", systemImage: "moon.stars") }
+                        .buttonStyle(Calendar.current.component(.hour, from: store.now) >= 17 ? .moiPrimary : .moiGhost)
                 }
                 askBox
                 if store.isReadOnly { ModuleMessage(text: "Your data is in read-only recovery mode, so nothing gets overwritten. \(store.persistenceError ?? "")") }
@@ -138,6 +140,7 @@ struct WorkspaceSettingsView: View {
             }
             Section("The notch") {
                 Button("Edit the notch…") { workspace.notchEditor = true }
+                Toggle("Let moi notice things and offer to help (a messy desktop, apps left open, the end of the day)", isOn: Binding(get: { MoiNudges.enabled }, set: { UserDefaults.standard.set($0, forKey: "moi.nudges") }))
                 Text("Choose its parts (music, now & next, calendar, UV, recent files), the mini notch while music plays, and the font.").font(MoiType.small).foregroundStyle(MoiStyle.quiet)
             }
             Section("moi on your desktop") {

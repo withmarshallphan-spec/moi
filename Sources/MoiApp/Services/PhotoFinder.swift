@@ -143,7 +143,9 @@ final class PhotoFinder: ObservableObject {
 
     func applyWallpaper(_ pick: WallpaperPick) async {
         do {
-            let before = try await setWallpaper(pick.id)
+            // moi carries the photo up and hangs it.
+            var before: [NSScreen: URL] = [:]
+            try await TidyShow.shared.hang(await preview(of: pick.id)) { before = try await setWallpaper(pick.id) }
             if oldWallpaper.isEmpty { oldWallpaper = before } // switching between picks still goes back to the original
             canRestoreWallpaper = !oldWallpaper.isEmpty; applied = pick.id
             message = "That's your wallpaper now. The photo itself isn't changed."
@@ -151,6 +153,19 @@ final class PhotoFinder: ObservableObject {
         }
         catch { self.error = error.localizedDescription }
     }
+    /// A screen-sized preview of a photo, for moi to carry.
+    private func preview(of source: Source) async -> NSImage? {
+        switch source {
+        case let .file(url):
+            guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+                  let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: 1800, kCGImageSourceCreateThumbnailWithTransform: true] as CFDictionary) else { return nil }
+            return NSImage(cgImage: cg, size: .zero)
+        case let .asset(id):
+            guard let asset = assets[id] ?? PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject, let cg = await thumbnail(asset, size: 1800) else { return nil }
+            return NSImage(cgImage: cg, size: .zero)
+        }
+    }
+
     func restoreWallpaper() {
         let failures = MacControl.restoreWallpaper(oldWallpaper)
         if failures.isEmpty { oldWallpaper = [:]; canRestoreWallpaper = false; applied = nil; message = "Your old wallpaper is back." }

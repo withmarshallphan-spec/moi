@@ -19,7 +19,7 @@ struct NotchPanelView: View {
     @State private var dragPosition: Double?
     @State private var flash: MoiCharacterState?
 
-    private var size: CGSize { NotchLayout.size(controller.mode, notch: controller.notchSize, parts: controller.visibleParts, showsNow: controller.showsNow, recentHeight: controller.recentHeight) }
+    private var size: CGSize { NotchLayout.size(controller.mode, notch: controller.notchSize, parts: controller.visibleParts, showsNow: controller.showsNow, recentHeight: controller.recentHeight, nudge: controller.nudge != nil) }
     private var shape: NotchShape { NotchShape(shoulder: NotchLayout.shoulder, bottomRadius: controller.mode == .expanded ? 22 : controller.notchSize.height / 2.4) }
 
     var body: some View {
@@ -56,12 +56,14 @@ struct NotchPanelView: View {
         case .peek:
             VStack(alignment: .leading, spacing: 0) {
                 wings
-                if let first = controller.visibleParts.first {
+                if let nudge = controller.nudge {
+                    nudgeRow(nudge).frame(height: NotchLayout.nudge).padding(.horizontal, NotchLayout.pad - NotchLayout.shoulder).padding(.top, 8)
+                } else if let first = controller.visibleParts.first {
                     part(first).padding(.horizontal, NotchLayout.pad - NotchLayout.shoulder).padding(.top, 8)
                 }
             }
             .contentShape(Rectangle())
-            .onTapGesture { controller.expand(sticky: false) }
+            .onTapGesture { if controller.nudge == nil { controller.expand(sticky: false) } }
             .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
         case .expanded:
             VStack(alignment: .leading, spacing: 0) {
@@ -70,6 +72,23 @@ struct NotchPanelView: View {
             }
             .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
         }
+    }
+
+    /// moi offering to help with something it noticed.
+    private func nudgeRow(_ nudge: Nudge) -> some View {
+        HStack(spacing: 10) {
+            Text(nudge.text).font(NotchFont.ui(13.5, weight: 600)).foregroundStyle(.white).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 6)
+            Button("Not now") { MoiNudges.shared.snooze(nudge); controller.collapse() }
+                .buttonStyle(.plain).font(NotchFont.ui(12, weight: 560)).foregroundStyle(.white.opacity(0.6))
+            Button { controller.collapse(); MoiNudges.shared.act(nudge) } label: {
+                Text(nudge.action).font(NotchFont.ui(12.5, weight: 650)).foregroundStyle(.white)
+                    .padding(.horizontal, 12).padding(.vertical, 7).background(MoiStyle.accent, in: Capsule())
+            }.buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .frame(maxHeight: .infinity)
+        .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     // MARK: Wings (notch height)

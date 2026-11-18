@@ -332,6 +332,9 @@ struct CoreTests {
         expect(MoiCommand.freeModelCandidates(provider: "gemini", available: geminiIDs) == ["gemini-flash-latest", "gemini-3.8-flash", "gemini-3.5-flash", "gemini-2.5-flash"], "free brain: stable Gemini models first, never previews (the 429)")
         expect(MoiCommand.freeModelCandidates(provider: "groq", available: ["whisper-large-v3", "llama-3.3-70b-versatile", "openai/gpt-oss-120b"]).first == "llama-3.3-70b-versatile", "free brain: Groq's strong default")
 
+        expect(said("wrap up my day") == .wrapUp && said("i'm done for today") == .wrapUp && said("let's call it a day") == .wrapUp && MoiCommand.intent(kind: "wrap_up", target: "", value: "") == .wrapUp, "wrap up: the end-of-day ritual")
+        expect(said("gym tomorrow 16:30") != .wrapUp, "wrap up: doesn't swallow plans")
+
         // MARK: Brain chain
         let noon = Date(timeIntervalSince1970: 1_800_000_000)
         expect(BrainChain.order(primary: "gemini", ready: ["gemini", "groq", "nvidia", "apple", "openai"], allowPaid: false, resting: [:], now: noon) == ["gemini", "groq", "nvidia", "apple"], "chain: main brain, free backups, Apple last; paid never without an OK")
