@@ -261,9 +261,8 @@ struct OnboardingView: View {
     @State private var acting: MoiCharacterState?
     @State private var line = ""
     private let steps = 10
-    /// moi can read each line aloud in its one voice (recorded once, bundled). Off unless turned on here.
-    @AppStorage("moi.introVoiceOn") private var voiceOn = false
-    private var muted: Bool { !voiceOn }
+    /// moi's little sound effects (blips while talking, boings while hopping). On unless muted here.
+    @AppStorage("moi.chatterOn") private var soundsOn = true
     @State private var showEverywhere = UserDefaults.standard.object(forKey: "moi.showCharacter") as? Bool ?? true
 
     var body: some View {
@@ -272,8 +271,8 @@ struct OnboardingView: View {
                 HStack(spacing: 6) { ForEach(0..<steps, id: \.self) { i in Capsule().fill(i <= step ? MoiStyle.accent : Color.white.opacity(0.15)).frame(width: i == step ? 18 : 6, height: 6) } }
                     .animation(.easeOut(duration: 0.2), value: step)
                 Spacer()
-                Button { voiceOn.toggle(); if !voiceOn { voice.cancel() } } label: { Image(systemName: voiceOn ? "speaker.wave.2" : "speaker.slash") }
-                    .buttonStyle(.moiGhost).help(voiceOn ? "Mute moi" : "Let moi read this aloud").accessibilityLabel(voiceOn ? "Mute moi" : "Let moi read this aloud")
+                Button { soundsOn.toggle() } label: { Image(systemName: soundsOn ? "speaker.wave.2" : "speaker.slash") }
+                    .buttonStyle(.moiGhost).help(soundsOn ? "Mute moi's sounds" : "Turn moi's sounds on").accessibilityLabel(soundsOn ? "Mute moi's sounds" : "Turn moi's sounds on")
                 Button("Skip the story") { finish() }.buttonStyle(.moiGhost).keyboardShortcut(.cancelAction)
             }
             stage.frame(height: 290)
@@ -307,7 +306,7 @@ struct OnboardingView: View {
                     .scaleEffect(moiScale, anchor: .bottom)
                     .position(x: geo.size.width / 2 + moiX, y: floor - 75 + moiY)
                 if !line.isEmpty {
-                    SpeechBubble(text: line)
+                    SpeechBubble(text: line, chatter: true)
                         .padding(.horizontal, 18).padding(.vertical, 14)
                         .frame(width: 340, alignment: .leading)
                         .background(MoiStyle.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -335,9 +334,9 @@ struct OnboardingView: View {
     /// The choreography for each beat. Reduce Motion: moi simply appears in place.
     private func perform(_ step: Int) async {
         error = nil; acting = nil
-        func say(_ text: String, _ clip: String) {
+        func say(_ text: String) {
             withAnimation(.easeOut(duration: 0.2)) { line = text }
-            if !muted { voice.play("intro-" + clip) }
+
         }
         func act(_ state: MoiCharacterState?, for seconds: Double? = nil) async {
             acting = state
@@ -353,43 +352,44 @@ struct OnboardingView: View {
                 try? await Task.sleep(for: .milliseconds(500))
                 withAnimation(.easeIn(duration: 0.42)) { moiY = 0 }
                 try? await Task.sleep(for: .milliseconds(420))
+                MoiChatter.shared.thud()
                 await act(.error, for: 0.9) // the landing
             }
-            say("Oof. …That was the landing.\n\nHi! Sorry. I'm a bit new at this.", "s0")
+            say("Oof. …That was the landing.\n\nHi! Sorry. I'm a bit new at this.")
             await act(.curious, for: 1.4)
         case 1:
-            say("Someone named Marshall made me. He said computers can feel like a hundred windows shouting at once.", "s1a")
+            say("Someone named Marshall made me, to help with the little things on your Mac.")
             await walk(to: -170)
             try? await Task.sleep(for: .seconds(5))
             await act(.happy, for: 1.0)
-            say("So he made a small someone to help with that. That's me. I'm moi.", "s1b")
+            say("So here I am. I'm moi.")
         case 2:
             await walk(to: 0)
             await act(.attention, for: 0.8)
-            say("Oh. Hello. You look like you could use a hand.\n\nWhat should I call you?", "s2")
+            say("Oh. Hello. You look like you could use a hand.\n\nWhat should I call you?")
         case 3:
             await act(.success, for: 0.9)
-            say("Nice to meet you\(name)! I've decided: I'm your helper now. Want to pick my colour? I'm not fussy. Mostly.", "s3")
+            say("Nice to meet you\(name)! I've decided: I'm your helper now. Want to pick my colour? I'm not fussy. Mostly.")
         case 4:
             await walk(to: -200)
             await act(.attention, for: 0.6)
-            say("I live in the notch: that black bit at the very top of your screen. Rest your pointer on it for your music. Click it for your day.", "s4")
+            say("I live in the notch: that black bit at the very top of your screen. Rest your pointer on it for your music. Click it for your day.")
         case 5:
             await walk(to: 0)
-            say("Need something? Press \(workspace.shortcut.rawValue) from anywhere, or open the Pocket. Tell me “gym tomorrow 4pm” or “clean up my desktop”.", "s5")
+            say("Need something? Press \(workspace.shortcut.rawValue) from anywhere, or open the Pocket. Tell me “gym tomorrow 4pm” or “clean up my desktop”.")
         case 6:
             await walk(to: -200)
-            say("Focus is a timer for one thing. While it runs, if you open an app on your distraction list, I'll ask if you want to get back to work.", "s6")
+            say("Focus is a timer for one thing. While it runs, if you open an app on your distraction list, I'll ask if you want to get back to work.")
         case 7:
             await walk(to: 0)
-            say(created ? "That's our first one together. I'm keeping count." : "You can add things just by typing, like “essay due fri”. Tell me one thing you want to get done.", created ? "s7b" : "s7a")
+            say(created ? "That's our first one together. I'm keeping count." : "You can add things just by typing, like “essay due fri”. Tell me one thing you want to get done.")
         case 8:
             await walk(to: -200)
-            say("To help properly I need a few keys. Each one is optional. Allow them now and I won't have to stop and ask later.", "s8")
+            say("To help properly I need a few keys. Each one is optional. Allow them now and I won't have to stop and ask later.")
         default:
             await walk(to: 0)
             await trip()
-            say("Right. I'll be up in the notch\(name). Press the shortcut any time and I'll come running. See you around!", "s9")
+            say("Right. I'll be up in the notch\(name). Press the shortcut any time and I'll come running. See you around!")
         }
     }
 
@@ -409,6 +409,7 @@ struct OnboardingView: View {
         let hops = max(1, Int(abs(target - moiX) / 55))
         let stride = (target - moiX) / CGFloat(hops)
         for _ in 0..<hops {
+            MoiChatter.shared.hop()
             withAnimation(.easeOut(duration: 0.13)) { moiX += stride / 2; moiY = -26 }
             try? await Task.sleep(for: .milliseconds(130))
             withAnimation(.easeIn(duration: 0.13)) { moiX += stride / 2; moiY = 0 }
@@ -486,7 +487,7 @@ struct OnboardingView: View {
             guard !store.isReadOnly else { error = "Your data is in read-only recovery mode, so I can't add it right now."; return }
             store.quickAdd(taskTitle.trimmingCharacters(in: .whitespaces))
             if let message = store.persistenceError { error = MoiVoice.failed("save that", reason: message) }
-            else { created = true; line = "That's our first one together. I'm keeping count."; if !muted { voice.play("intro-s7b") } }
+            else { created = true; line = "That's our first one together. I'm keeping count." }
             return
         case 9: moveIn(); return
         default: break
@@ -633,6 +634,8 @@ struct FocusSetup: View {
 /// moi's speech: display face, text appears briskly as if said (instant with Reduce Motion).
 struct SpeechBubble: View {
     let text: String
+    /// Soft blips as the words appear, like moi talking.
+    var chatter = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var shown = 0
     var body: some View {
@@ -646,6 +649,7 @@ struct SpeechBubble: View {
                 guard !reduceMotion else { return }
                 while shown < text.count && !Task.isCancelled {
                     shown += 1
+                    if chatter, shown % 3 == 1, text[text.index(text.startIndex, offsetBy: shown - 1)].isLetter { MoiChatter.shared.blip() }
                     try? await Task.sleep(for: .milliseconds(text[text.index(text.startIndex, offsetBy: shown - 1)] == "\n" ? 180 : 16))
                 }
             }

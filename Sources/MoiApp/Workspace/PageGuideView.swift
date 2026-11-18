@@ -119,7 +119,19 @@ struct AboutMOIView: View {
                 Spacer()
                 Button("Done") { dismiss() }.buttonStyle(.moiSecondary).keyboardShortcut(.defaultAction)
             }
-            Text("Made by Marshall Phan, who thinks computers shouldn't feel like a hundred windows shouting at once. moi is free and open source, and it runs on your Mac.").font(MoiType.body).fixedSize(horizontal: false, vertical: true)
+            Text("Made by Marshall Phan to make the little things on your Mac easier. moi is free, open source, and runs on your Mac.").font(MoiType.body).fixedSize(horizontal: false, vertical: true)
+            Link(destination: URL(string: "https://marshallphan.com")!) {
+                HStack(spacing: 12) {
+                    Image(systemName: "person.crop.circle.fill").font(.system(size: 26)).foregroundStyle(MoiStyle.accent)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Meet Marshall").font(MoiType.ui(14.5, weight: 650)).foregroundStyle(Color.primary)
+                        Text("marshallphan.com · what else he's making").font(MoiType.ui(12.5)).foregroundStyle(MoiStyle.quiet)
+                    }
+                    Spacer()
+                    Image(systemName: "arrow.up.right").foregroundStyle(MoiStyle.quiet)
+                }
+                .padding(14).background(MoiStyle.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }.buttonStyle(.plain)
             VStack(alignment: .leading, spacing: 10) {
                 Link(destination: Self.repo) { Label("Star moi on GitHub", systemImage: "star.fill") }
                 Link(destination: Self.repo.appendingPathComponent("issues")) { Label("Report a bug or ask for a feature", systemImage: "ladybug") }

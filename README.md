@@ -53,7 +53,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 ## Made by
 
-[Marshall Phan](https://github.com/withmarshallphan-spec). If moi makes your Mac a little calmer, a star helps.
+**[Marshall Phan](https://marshallphan.com).** See what else he's making at **[marshallphan.com](https://marshallphan.com)**.
+
+If moi makes your Mac a little calmer, a star helps.
 
 ## License
 

@@ -6,7 +6,7 @@ import AudioToolbox
 
 struct MoiAudioDevice: Identifiable { var id: AudioDeviceID; var name: String }
 @MainActor
-final class VoiceService: NSObject, ObservableObject, AVAudioPlayerDelegate {
+final class VoiceService: NSObject, ObservableObject {
     static let shared = VoiceService()
     @Published private(set) var recording = false
     @Published private(set) var speaking = false
@@ -20,8 +20,6 @@ final class VoiceService: NSObject, ObservableObject, AVAudioPlayerDelegate {
     private var recognition: SFSpeechRecognitionTask?
     private var generation = UUID()
     private var finishTimeout: Task<Void, Never>?
-    /// moi's one voice: lines recorded once (Qwen3-TTS, "serena") and bundled. Used by the introduction.
-    private var player: AVAudioPlayer?
     /// Talk mode: what's heard goes straight to moi, which answers in the chat.
     private var talking = false
     private var silenceWatch: Task<Void, Never>?
@@ -125,18 +123,7 @@ final class VoiceService: NSObject, ObservableObject, AVAudioPlayerDelegate {
     }
     func cancel() {
         generation = UUID(); preparing = false; talking = false; silenceWatch?.cancel(); stopCapture()
-        player?.stop(); player = nil
         recognition?.cancel(); recognition = nil; finishTimeout?.cancel(); finishTimeout = nil
         speaking = false
     }
-    /// Plays one of moi's recorded lines ("intro-s0" …). Silent if the clip is missing.
-    func play(_ clip: String) {
-        cancel()
-        guard let url = Bundle.moi.url(forResource: clip, withExtension: "m4a", subdirectory: "Voice") ?? Bundle.moi.url(forResource: clip, withExtension: "m4a"),
-              let player = try? AVAudioPlayer(contentsOf: url) else { return }
-        player.delegate = self
-        self.player = player
-        speaking = player.play()
-    }
-    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) { Task { @MainActor in if self.player === player { self.speaking = false; self.player = nil } } }
 }
